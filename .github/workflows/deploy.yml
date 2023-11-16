@@ -39,10 +39,12 @@ jobs:
 
       - name: Deploy
         run: |
+          cat .npmignore > .gitignore
+          rm -rf .git
+          git init
           git config user.email "none"
           git config user.name "bot"
-          rm .gitignore
-          mv .npmignore .gitignore
           git add .
           git commit -m'update build'
+          git remote add origin $GITHUB_SERVER_URL/$GITHUB_REPOSITORY
           git push -f -u origin built-develop
