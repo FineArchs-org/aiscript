@@ -44,4 +44,6 @@ jobs:
           git add .
           git commit -m'update build'
           gh repo set-default $GITHUB_REPOSITORY
+          gh repo set-default --view
+          git remote
           git push -f -u upstream built-develop
