@@ -36,6 +36,7 @@ jobs:
         run: |
           git config user.email "none"
           git config user.name "bot"
+          git config advice.addIgnoredFile false
           git switch -c built-develop
           rm .gitignore
           mv .npmignore .gitignore
