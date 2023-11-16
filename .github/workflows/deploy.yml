@@ -16,6 +16,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.1
 
+      - name: Create branch
+        run: git switch -c built-develop
+
       - name: Setup Node.js
         uses: actions/setup-node@v4.0.0
         with:
@@ -38,10 +41,8 @@ jobs:
         run: |
           git config user.email "none"
           git config user.name "bot"
-          git switch -c built-develop
           rm .gitignore
           mv .npmignore .gitignore
-          git clean -Xfd
           git add .
           git commit -m'update build'
           git push -f -u origin built-develop
