@@ -43,5 +43,5 @@ jobs:
           git config user.name "bot"
           git add .
           git commit -m'update build'
-          git remote add origin $GITHUB_SERVER_URL/$GITHUB_REPOSITORY
-          git push -f -u origin built-develop
+          gh repo set-default $GITHUB_REPOSITORY
+          git push -f -u upstream built-develop
