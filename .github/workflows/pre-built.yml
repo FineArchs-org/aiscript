@@ -1,9 +1,10 @@
-name: Deploy
+name: Deploy Pre-built branch
 
 on:
   push:
     branches:
       - master
+      - aiscript-next
   workflow_dispatch:
 
 jobs:
@@ -36,13 +37,14 @@ jobs:
 
       - name: Deploy
         run: |
+          BRANCH_NAME=built-${GITHUB_REF##*/}
           cat .npmignore > .gitignore
           rm -rf .git
-          git init -b built-develop
+          git init -b $BRANCH_NAME
           git config user.email "none"
           git config user.name "bot"
           git add .
           git commit -m'update build'
           git remote add origin $GITHUB_SERVER_URL/$GITHUB_REPOSITORY
           gh auth setup-git
-          git push -f -u origin built-develop
+          git push -f -u origin $BRANCH_NAME
