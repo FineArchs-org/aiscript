@@ -2,6 +2,8 @@ name: API report
 
 on:
   push:
+    branches:
+      - master
   pull_request:
   workflow_dispatch:
 
