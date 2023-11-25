@@ -155,34 +155,28 @@ export const std: Record<string, Value> = {
 		return NUM(Date.now());
 	}),
 
-	'Date:year': FN_NATIVE(([v]) => {
-		if (v) { assertNumber(v); }
-		return NUM(new Date(v?.value || Date.now()).getFullYear());
+	'Date:year': FN_NATIVE(() => {
+		return NUM(new Date().getFullYear());
 	}),
 
-	'Date:month': FN_NATIVE(([v]) => {
-		if (v) { assertNumber(v); }
-		return NUM(new Date(v?.value || Date.now()).getMonth() + 1);
+	'Date:month': FN_NATIVE(() => {
+		return NUM(new Date().getMonth() + 1);
 	}),
 
-	'Date:day': FN_NATIVE(([v]) => {
-		if (v) { assertNumber(v); }
-		return NUM(new Date(v?.value || Date.now()).getDate());
+	'Date:day': FN_NATIVE(() => {
+		return NUM(new Date().getDate());
 	}),
 
-	'Date:hour': FN_NATIVE(([v]) => {
-		if (v) { assertNumber(v); }
-		return NUM(new Date(v?.value || Date.now()).getHours());
+	'Date:hour': FN_NATIVE(() => {
+		return NUM(new Date().getHours());
 	}),
 
-	'Date:minute': FN_NATIVE(([v]) => {
-		if (v) { assertNumber(v); }
-		return NUM(new Date(v?.value || Date.now()).getMinutes());
+	'Date:minute': FN_NATIVE(() => {
+		return NUM(new Date().getMinutes());
 	}),
 
-	'Date:second': FN_NATIVE(([v]) => {
-		if (v) { assertNumber(v); }
-		return NUM(new Date(v?.value || Date.now()).getSeconds());
+	'Date:second': FN_NATIVE(() => {
+		return NUM(new Date().getSeconds());
 	}),
 
 	'Date:parse': FN_NATIVE(([v]) => {
@@ -287,9 +281,9 @@ export const std: Record<string, Value> = {
 		assertString(b);
 		if (a.value < b.value) {
 			return NUM(-1);
-		} else if (a.value === b.value) {
+		}else if (a.value === b.value){
 			return NUM(0);
-		} else {
+		}else {
 			return NUM(1);
 		}
 	}),
@@ -298,9 +292,9 @@ export const std: Record<string, Value> = {
 		assertString(b);
 		if (a.value > b.value) {
 			return NUM(-1);
-		} else if (a.value === b.value) {
+		}else if (a.value === b.value){
 			return NUM(0);
-		} else {
+		}else {
 			return NUM(1);
 		}
 	}),

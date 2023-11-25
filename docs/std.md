@@ -53,35 +53,23 @@ JSONをパースします。
 ### @Date:now(): num
 現在時刻を取得します。  
 
-### @Date:year(_date_?: num): num
-時刻の年を取得します。  
-_date_ を渡した場合、_date_に対応する年、  
-渡していない場合は現在時刻の年が返されます。    
+### @Date:year(): num
+現在時刻の年を取得します。  
 
-### @Date:month(_date_?: num): num
+### @Date:month(): num
 現在時刻の月を取得します。  
-_date_ を渡した場合、_date_に対応する月、  
-渡していない場合は現在時刻の月が返されます。    
 
-### @Date:day(_date_?: num): num
+### @Date:day(): num
 現在時刻の日を取得します。  
-_date_ を渡した場合、_date_に対応する日、  
-渡していない場合は現在時刻の日が返されます。    
 
-### @Date:hour(_date_?: num): num
+### @Date:hour(): num
 現在時刻の時を取得します。  
-_date_ を渡した場合、_date_に対応する時、  
-渡していない場合は現在時刻の時が返されます。    
 
-### @Date:minute(_date_?: num): num
+### @Date:minute(): num
 現在時刻の分を取得します。  
-_date_ を渡した場合、_date_に対応する分、  
-渡していない場合は現在時刻の分が返されます。    
 
-### @Date:second(_date_?: num): num
+### @Date:second(): num
 現在時刻の秒を取得します。  
-_date_ を渡した場合、_date_に対応する秒、  
-渡していない場合は現在時刻の秒が返されます。    
 
 ### @Date:parse(_date_: str): num
 

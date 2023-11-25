@@ -186,7 +186,7 @@ const PRIMITIVE_PROPS: {
 				const left = await mergeSort(arr.slice(0, mid), comp);
 				const right = await mergeSort(arr.slice(mid), comp);
 				return merge(left, right, comp);
-			};
+			}
 			const merge = async (left: Value[], right: Value[], comp: VFn): Promise<Value[]> => {
 				const result: Value[] = [];
 				let leftIndex = 0;
@@ -205,12 +205,12 @@ const PRIMITIVE_PROPS: {
 					}
 				}
 				return result.concat(left.slice(leftIndex)).concat(right.slice(rightIndex));
-			};
+			}
 
 			assertFunction(comp);
 			assertArray(target);
 			target.value = await mergeSort(target.value, comp);
-			return target;
+			return target
 		}),
 	},
 } as const;
