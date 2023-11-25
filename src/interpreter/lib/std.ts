@@ -148,16 +148,6 @@ export const std: Record<string, Value> = {
 		assertString(json);
 		return jsToVal(JSON.parse(json.value));
 	}),
-
-	'Json:parsable': FN_NATIVE(([str]) => {
-		assertString(str);
-		try {
-			JSON.parse(str.value);
-		} catch (e) {
-			return BOOL(false);
-		}
-		return BOOL(true);
-	}),
 	//#endregion
 
 	//#region Date

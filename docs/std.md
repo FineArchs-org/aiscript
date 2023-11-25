@@ -48,9 +48,6 @@ JSONを生成します。
 JSONをパースします。  
 引数がJSONとしてパース可能でない場合はエラーになります。
 
-### @Json:parsable(_str_: str): bool
-文字列がJSONとしてパース可能であるかの判定を行います。 
-
 ## :: Date
 
 ### @Date:now(): num

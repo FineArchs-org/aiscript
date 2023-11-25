@@ -2691,37 +2691,6 @@ describe('std', () => {
 			`);
 			eq(res, STR('"<function>"'));
 		});
-
-		test.concurrent('parsable', async () => {
-			[
-				'',
-				'null',
-				'hoge',
-				'"hoge"',
-				'[',
-				'[]',
-				'{}'
-			].forEach(async (str)=>{
-				const res=await exe(`
-					<: Json:parsable('${str}')
-				`);
-				assert.deepEqual(res.type, 'bool');
-				if (res.value){
-					await exe(`
-						<: Json:parse('${str}')
-					`);
-				} else {
-					try {
-						await exe(`
-							<: Json:parse('${str}')
-						`);
-					} catch (e) {
-						if (e instanceof SyntaxError) return;
-					}
-					assert.fail()
-				}
-			}):
-		});
 	});
 });
 
