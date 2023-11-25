@@ -1,0 +1,624 @@
+/**
+ * AiScript interpreter
+ */
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import { autobind } from '../utils/mini-autobind.js';
+import { AiScriptError, NonAiScriptError, AiScriptIndexOutOfRangeError, AiScriptRuntimeError } from '../error.js';
+import { Scope } from './scope.js';
+import { std } from './lib/std.js';
+import { assertNumber, assertString, assertFunction, assertBoolean, assertObject, assertArray, eq, isObject, isArray, expectAny, reprValue } from './util.js';
+import { NULL, RETURN, unWrapRet, FN_NATIVE, BOOL, NUM, STR, ARR, OBJ, FN, BREAK, CONTINUE, ERROR } from './value.js';
+import { getPrimProp } from './primitive-props.js';
+import { Variable } from './variable.js';
+const IRQ_RATE = 300;
+const IRQ_AT = IRQ_RATE - 1;
+export class Interpreter {
+    opts;
+    stepCount = 0;
+    stop = false;
+    scope;
+    abortHandlers = [];
+    vars = {};
+    constructor(consts, opts = {}) {
+        this.opts = opts;
+        const io = {
+            print: FN_NATIVE(([v]) => {
+                expectAny(v);
+                if (this.opts.out)
+                    this.opts.out(v);
+            }),
+            readline: FN_NATIVE(async (args) => {
+                const q = args[0];
+                assertString(q);
+                if (this.opts.in == null)
+                    return NULL;
+                const a = await this.opts.in(q.value);
+                return STR(a);
+            }),
+        };
+        this.vars = Object.fromEntries(Object.entries({
+            ...consts,
+            ...std,
+            ...io,
+        }).map(([k, v]) => [k, Variable.const(v)]));
+        this.scope = new Scope([new Map(Object.entries(this.vars))]);
+        this.scope.opts.log = (type, params) => {
+            switch (type) {
+                case 'add':
+                    this.log('var:add', params);
+                    break;
+                case 'read':
+                    this.log('var:read', params);
+                    break;
+                case 'write':
+                    this.log('var:write', params);
+                    break;
+                default: break;
+            }
+        };
+    }
+    async exec(script) {
+        if (script == null || script.length === 0)
+            return;
+        try {
+            await this.collectNs(script);
+            const result = await this._run(script, this.scope);
+            this.log('end', { val: result });
+        }
+        catch (e) {
+            this.handleError(e);
+        }
+    }
+    /**
+     * Executes AiScript Function.
+     * When it fails,
+     * (i)If error callback is registered via constructor, this.abort is called and the callback executed, then returns ERROR('func_failed').
+     * (ii)Otherwise, just throws a error.
+     *
+     * @remarks This is the same function as that passed to AiScript NATIVE functions as opts.topCall.
+     *
+     * @param fn - the function
+     * @param args - arguments for the function
+     * @returns Return value of the function, or ERROR('func_failed') when the (i) condition above is fulfilled.
+     */
+    async execFn(fn, args) {
+        return await this._fn(fn, args)
+            .catch(e => {
+            this.handleError(e);
+            return ERROR('func_failed');
+        });
+    }
+    /**
+     * Executes AiScript Function.
+     * Almost same as execFn but when error occurs this always throws and never calls callback.
+     *
+     * @remarks This is the same function as that passed to AiScript NATIVE functions as opts.call.
+     *
+     * @param fn - the function
+     * @param args - arguments for the function
+     * @returns Return value of the function.
+     */
+    execFnSimple(fn, args) {
+        return this._fn(fn, args);
+    }
+    static collectMetadata(script) {
+        if (script == null || script.length === 0)
+            return;
+        function nodeToJs(node) {
+            switch (node.type) {
+                case 'arr': return node.value.map(item => nodeToJs(item));
+                case 'bool': return node.value;
+                case 'null': return null;
+                case 'num': return node.value;
+                case 'obj': {
+                    const obj = {};
+                    for (const [k, v] of node.value.entries()) {
+                        // TODO: keyが__proto__とかじゃないかチェック
+                        obj[k] = nodeToJs(v);
+                    }
+                    return obj;
+                }
+                case 'str': return node.value;
+                default: return undefined;
+            }
+        }
+        const meta = new Map();
+        for (const node of script) {
+            switch (node.type) {
+                case 'meta': {
+                    meta.set(node.name, nodeToJs(node.value));
+                    break;
+                }
+                default: {
+                    // nop
+                }
+            }
+        }
+        return meta;
+    }
+    handleError(e) {
+        if (this.opts.err) {
+            if (!this.stop) {
+                this.abort();
+                if (e instanceof AiScriptError) {
+                    this.opts.err(e);
+                }
+                else {
+                    this.opts.err(new NonAiScriptError(e));
+                }
+            }
+        }
+        else {
+            throw e;
+        }
+    }
+    log(type, params) {
+        if (this.opts.log)
+            this.opts.log(type, params);
+    }
+    async collectNs(script) {
+        for (const node of script) {
+            switch (node.type) {
+                case 'ns': {
+                    await this.collectNsMember(node);
+                    break;
+                }
+                default: {
+                    // nop
+                }
+            }
+        }
+    }
+    async collectNsMember(ns) {
+        const scope = this.scope.createChildScope();
+        for (const node of ns.members) {
+            switch (node.type) {
+                case 'def': {
+                    if (node.mut) {
+                        throw new Error('Namespaces cannot include mutable variable: ' + node.name);
+                    }
+                    const variable = {
+                        isMutable: node.mut,
+                        value: await this._eval(node.expr, scope),
+                    };
+                    scope.add(node.name, variable);
+                    this.scope.add(ns.name + ':' + node.name, variable);
+                    break;
+                }
+                case 'ns': {
+                    break; // TODO
+                }
+                default: {
+                    throw new Error('invalid ns member type: ' + node.type);
+                }
+            }
+        }
+    }
+    async _fn(fn, args) {
+        if (fn.native) {
+            const result = fn.native(args, {
+                call: this.execFnSimple,
+                topCall: this.execFn,
+                registerAbortHandler: this.registerAbortHandler,
+                unregisterAbortHandler: this.unregisterAbortHandler,
+            });
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            return result ?? NULL;
+        }
+        else {
+            const _args = new Map();
+            for (let i = 0; i < (fn.args ?? []).length; i++) {
+                _args.set(fn.args[i], {
+                    isMutable: true,
+                    value: args[i],
+                });
+            }
+            const fnScope = fn.scope.createChildScope(_args);
+            return unWrapRet(await this._run(fn.statements, fnScope));
+        }
+    }
+    async _eval(node, scope) {
+        if (this.stop)
+            return NULL;
+        if (this.stepCount % IRQ_RATE === IRQ_AT)
+            await new Promise(resolve => setTimeout(resolve, 5));
+        this.stepCount++;
+        if (this.opts.maxStep && this.stepCount > this.opts.maxStep) {
+            throw new AiScriptRuntimeError('max step exceeded');
+        }
+        switch (node.type) {
+            case 'call': {
+                const callee = await this._eval(node.target, scope);
+                assertFunction(callee);
+                const args = await Promise.all(node.args.map(expr => this._eval(expr, scope)));
+                return this._fn(callee, args);
+            }
+            case 'if': {
+                const cond = await this._eval(node.cond, scope);
+                assertBoolean(cond);
+                if (cond.value) {
+                    return this._eval(node.then, scope);
+                }
+                else {
+                    if (node.elseif && node.elseif.length > 0) {
+                        for (const elseif of node.elseif) {
+                            const cond = await this._eval(elseif.cond, scope);
+                            assertBoolean(cond);
+                            if (cond.value) {
+                                return this._eval(elseif.then, scope);
+                            }
+                        }
+                        if (node.else) {
+                            return this._eval(node.else, scope);
+                        }
+                    }
+                    else if (node.else) {
+                        return this._eval(node.else, scope);
+                    }
+                }
+                return NULL;
+            }
+            case 'match': {
+                const about = await this._eval(node.about, scope);
+                for (const qa of node.qs) {
+                    const q = await this._eval(qa.q, scope);
+                    if (eq(about, q)) {
+                        return await this._eval(qa.a, scope);
+                    }
+                }
+                if (node.default) {
+                    return await this._eval(node.default, scope);
+                }
+                return NULL;
+            }
+            case 'loop': {
+                // eslint-disable-next-line no-constant-condition
+                while (true) {
+                    const v = await this._run(node.statements, scope.createChildScope());
+                    if (v.type === 'break') {
+                        break;
+                    }
+                    else if (v.type === 'return') {
+                        return v;
+                    }
+                }
+                return NULL;
+            }
+            case 'for': {
+                if (node.times) {
+                    const times = await this._eval(node.times, scope);
+                    assertNumber(times);
+                    for (let i = 0; i < times.value; i++) {
+                        const v = await this._eval(node.for, scope);
+                        if (v.type === 'break') {
+                            break;
+                        }
+                        else if (v.type === 'return') {
+                            return v;
+                        }
+                    }
+                }
+                else {
+                    const from = await this._eval(node.from, scope);
+                    const to = await this._eval(node.to, scope);
+                    assertNumber(from);
+                    assertNumber(to);
+                    for (let i = from.value; i < from.value + to.value; i++) {
+                        const v = await this._eval(node.for, scope.createChildScope(new Map([
+                            [node.var, {
+                                    isMutable: false,
+                                    value: NUM(i),
+                                }],
+                        ])));
+                        if (v.type === 'break') {
+                            break;
+                        }
+                        else if (v.type === 'return') {
+                            return v;
+                        }
+                    }
+                }
+                return NULL;
+            }
+            case 'each': {
+                const items = await this._eval(node.items, scope);
+                assertArray(items);
+                for (const item of items.value) {
+                    const v = await this._eval(node.for, scope.createChildScope(new Map([
+                        [node.var, {
+                                isMutable: false,
+                                value: item,
+                            }],
+                    ])));
+                    if (v.type === 'break') {
+                        break;
+                    }
+                    else if (v.type === 'return') {
+                        return v;
+                    }
+                }
+                return NULL;
+            }
+            case 'def': {
+                const value = await this._eval(node.expr, scope);
+                if (node.attr.length > 0) {
+                    const attrs = [];
+                    for (const nAttr of node.attr) {
+                        attrs.push({
+                            name: nAttr.name,
+                            value: await this._eval(nAttr.value, scope),
+                        });
+                    }
+                    value.attr = attrs;
+                }
+                scope.add(node.name, {
+                    isMutable: node.mut,
+                    value: value,
+                });
+                return NULL;
+            }
+            case 'identifier': {
+                return scope.get(node.name);
+            }
+            case 'assign': {
+                const v = await this._eval(node.expr, scope);
+                await this.assign(scope, node.dest, v);
+                return NULL;
+            }
+            case 'addAssign': {
+                const target = await this._eval(node.dest, scope);
+                assertNumber(target);
+                const v = await this._eval(node.expr, scope);
+                assertNumber(v);
+                await this.assign(scope, node.dest, NUM(target.value + v.value));
+                return NULL;
+            }
+            case 'subAssign': {
+                const target = await this._eval(node.dest, scope);
+                assertNumber(target);
+                const v = await this._eval(node.expr, scope);
+                assertNumber(v);
+                await this.assign(scope, node.dest, NUM(target.value - v.value));
+                return NULL;
+            }
+            case 'null': return NULL;
+            case 'bool': return BOOL(node.value);
+            case 'num': return NUM(node.value);
+            case 'str': return STR(node.value);
+            case 'arr': return ARR(await Promise.all(node.value.map(item => this._eval(item, scope))));
+            case 'obj': {
+                const obj = new Map();
+                for (const k of node.value.keys()) {
+                    obj.set(k, await this._eval(node.value.get(k), scope));
+                }
+                return OBJ(obj);
+            }
+            case 'prop': {
+                const target = await this._eval(node.target, scope);
+                if (isObject(target)) {
+                    if (target.value.has(node.name)) {
+                        return target.value.get(node.name);
+                    }
+                    else {
+                        return NULL;
+                    }
+                }
+                else {
+                    return getPrimProp(target, node.name);
+                }
+            }
+            case 'index': {
+                const target = await this._eval(node.target, scope);
+                const i = await this._eval(node.index, scope);
+                if (isArray(target)) {
+                    assertNumber(i);
+                    const item = target.value[i.value];
+                    if (item === undefined) {
+                        throw new AiScriptIndexOutOfRangeError(`Index out of range. index: ${i.value} max: ${target.value.length - 1}`);
+                    }
+                    return item;
+                }
+                else if (isObject(target)) {
+                    assertString(i);
+                    if (target.value.has(i.value)) {
+                        return target.value.get(i.value);
+                    }
+                    else {
+                        return NULL;
+                    }
+                }
+                else {
+                    throw new AiScriptRuntimeError(`Cannot read prop (${reprValue(i)}) of ${target.type}.`);
+                }
+            }
+            case 'not': {
+                const v = await this._eval(node.expr, scope);
+                assertBoolean(v);
+                return BOOL(!v.value);
+            }
+            case 'fn': {
+                return FN(node.args.map(arg => arg.name), node.children, scope);
+            }
+            case 'block': {
+                return this._run(node.statements, scope.createChildScope());
+            }
+            case 'exists': {
+                return BOOL(scope.exists(node.identifier.name));
+            }
+            case 'tmpl': {
+                let str = '';
+                for (const x of node.tmpl) {
+                    if (typeof x === 'string') {
+                        str += x;
+                    }
+                    else {
+                        const v = await this._eval(x, scope);
+                        str += reprValue(v);
+                    }
+                }
+                return STR(str);
+            }
+            case 'return': {
+                const val = await this._eval(node.expr, scope);
+                this.log('block:return', { scope: scope.name, val: val });
+                return RETURN(val);
+            }
+            case 'break': {
+                this.log('block:break', { scope: scope.name });
+                return BREAK();
+            }
+            case 'continue': {
+                this.log('block:continue', { scope: scope.name });
+                return CONTINUE();
+            }
+            case 'ns': {
+                return NULL; // nop
+            }
+            case 'meta': {
+                return NULL; // nop
+            }
+            case 'and': {
+                const leftValue = await this._eval(node.left, scope);
+                assertBoolean(leftValue);
+                if (!leftValue.value) {
+                    return leftValue;
+                }
+                else {
+                    const rightValue = await this._eval(node.right, scope);
+                    assertBoolean(rightValue);
+                    return rightValue;
+                }
+            }
+            case 'or': {
+                const leftValue = await this._eval(node.left, scope);
+                assertBoolean(leftValue);
+                if (leftValue.value) {
+                    return leftValue;
+                }
+                else {
+                    const rightValue = await this._eval(node.right, scope);
+                    assertBoolean(rightValue);
+                    return rightValue;
+                }
+            }
+            default: {
+                throw new Error('invalid node type');
+            }
+        }
+    }
+    async _run(program, scope) {
+        this.log('block:enter', { scope: scope.name });
+        let v = NULL;
+        for (let i = 0; i < program.length; i++) {
+            const node = program[i];
+            v = await this._eval(node, scope);
+            if (v.type === 'return') {
+                this.log('block:return', { scope: scope.name, val: v.value });
+                return v;
+            }
+            else if (v.type === 'break') {
+                this.log('block:break', { scope: scope.name });
+                return v;
+            }
+            else if (v.type === 'continue') {
+                this.log('block:continue', { scope: scope.name });
+                return v;
+            }
+        }
+        this.log('block:leave', { scope: scope.name, val: v });
+        return v;
+    }
+    registerAbortHandler(handler) {
+        this.abortHandlers.push(handler);
+    }
+    unregisterAbortHandler(handler) {
+        this.abortHandlers = this.abortHandlers.filter(h => h !== handler);
+    }
+    abort() {
+        this.stop = true;
+        for (const handler of this.abortHandlers) {
+            handler();
+        }
+        this.abortHandlers = [];
+    }
+    async assign(scope, dest, value) {
+        if (dest.type === 'identifier') {
+            scope.assign(dest.name, value);
+        }
+        else if (dest.type === 'index') {
+            const assignee = await this._eval(dest.target, scope);
+            const i = await this._eval(dest.index, scope);
+            if (isArray(assignee)) {
+                assertNumber(i);
+                assignee.value[i.value] = value; // TODO: 存在チェック
+            }
+            else if (isObject(assignee)) {
+                assertString(i);
+                assignee.value.set(i.value, value);
+            }
+            else {
+                throw new AiScriptRuntimeError(`Cannot read prop (${reprValue(i)}) of ${assignee.type}.`);
+            }
+        }
+        else if (dest.type === 'prop') {
+            const assignee = await this._eval(dest.target, scope);
+            assertObject(assignee);
+            assignee.value.set(dest.name, value);
+        }
+        else {
+            throw new AiScriptRuntimeError('The left-hand side of an assignment expression must be a variable or a property/index access.');
+        }
+    }
+}
+__decorate([
+    autobind
+], Interpreter.prototype, "exec", null);
+__decorate([
+    autobind
+], Interpreter.prototype, "execFn", null);
+__decorate([
+    autobind
+], Interpreter.prototype, "execFnSimple", null);
+__decorate([
+    autobind
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+], Interpreter.prototype, "handleError", null);
+__decorate([
+    autobind
+], Interpreter.prototype, "log", null);
+__decorate([
+    autobind
+], Interpreter.prototype, "collectNs", null);
+__decorate([
+    autobind
+], Interpreter.prototype, "collectNsMember", null);
+__decorate([
+    autobind
+], Interpreter.prototype, "_fn", null);
+__decorate([
+    autobind
+], Interpreter.prototype, "_eval", null);
+__decorate([
+    autobind
+], Interpreter.prototype, "_run", null);
+__decorate([
+    autobind
+], Interpreter.prototype, "registerAbortHandler", null);
+__decorate([
+    autobind
+], Interpreter.prototype, "unregisterAbortHandler", null);
+__decorate([
+    autobind
+], Interpreter.prototype, "abort", null);
+__decorate([
+    autobind
+], Interpreter.prototype, "assign", null);
+__decorate([
+    autobind
+], Interpreter, "collectMetadata", null);
+//# sourceMappingURL=index.js.map

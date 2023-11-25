@@ -1,0 +1,40 @@
+export declare abstract class AiScriptError extends Error {
+    name: string;
+    info?: any;
+    constructor(message: string, info?: any);
+}
+/**
+ * Wrapper for non-AiScript errors.
+ */
+export declare class NonAiScriptError extends AiScriptError {
+    name: string;
+    constructor(error: any);
+}
+/**
+ * Parse-time errors.
+ */
+export declare class AiScriptSyntaxError extends AiScriptError {
+    name: string;
+    constructor(message: string, info?: any);
+}
+/**
+ * Type validation(parser/plugins/validate-type) errors.
+ */
+export declare class AiScriptTypeError extends AiScriptError {
+    name: string;
+    constructor(message: string, info?: any);
+}
+/**
+ * Interpret-time errors.
+ */
+export declare class AiScriptRuntimeError extends AiScriptError {
+    name: string;
+    constructor(message: string, info?: any);
+}
+/**
+ * RuntimeError for illegal access to arrays.
+ */
+export declare class AiScriptIndexOutOfRangeError extends AiScriptRuntimeError {
+    constructor(message: string, info?: any);
+}
+//# sourceMappingURL=error.d.ts.map

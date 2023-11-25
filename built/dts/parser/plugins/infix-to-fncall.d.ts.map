@@ -1,0 +1,1 @@
+{"version":3,"file":"infix-to-fncall.d.ts","sourceRoot":"","sources":["../../../../src/parser/plugins/infix-to-fncall.ts"],"names":[],"mappings":"AAEA,OAAO,KAAK,KAAK,GAAG,MAAM,YAAY,CAAC;AAqIvC,wBAAgB,aAAa,CAAC,KAAK,EAAE,GAAG,CAAC,IAAI,EAAE,GAAG,GAAG,CAAC,IAAI,EAAE,CAU3D"}

@@ -1,0 +1,37 @@
+import * as Cst from '../node.js';
+import { visitNode } from '../visit.js';
+function transformNode(node) {
+    // chain
+    if (Cst.isExpression(node) && Cst.hasChainProp(node) && node.chain != null) {
+        const { chain, ...hostNode } = node;
+        let parent = hostNode;
+        for (const item of chain) {
+            switch (item.type) {
+                case 'callChain': {
+                    parent = Cst.CALL(parent, item.args, item.loc);
+                    break;
+                }
+                case 'indexChain': {
+                    parent = Cst.INDEX(parent, item.index, item.loc);
+                    break;
+                }
+                case 'propChain': {
+                    parent = Cst.PROP(parent, item.name, item.loc);
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+        }
+        return parent;
+    }
+    return node;
+}
+export function transformChain(nodes) {
+    for (let i = 0; i < nodes.length; i++) {
+        nodes[i] = visitNode(nodes[i], transformNode);
+    }
+    return nodes;
+}
+//# sourceMappingURL=transform-chain.js.map
