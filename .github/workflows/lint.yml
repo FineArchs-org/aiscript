@@ -2,8 +2,9 @@ name: Lint
 
 on:
   push:
-    branches:
-      - master
+    branches-ignore:
+      - built-*
+      - gh-pages
   pull_request:
   workflow_dispatch:
 
