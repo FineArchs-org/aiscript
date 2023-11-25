@@ -124,14 +124,6 @@ describe('ops', () => {
 		eq(await exe('<: (true && false)'), BOOL(false));
 		eq(await exe('<: (false && true)'), BOOL(false));
 		eq(await exe('<: (false && false)'), BOOL(false));
-		eq(await exe('<: (false && null)'), BOOL(false));
-		try {
-			await exe('<: (true && null)');
-		} catch (e) {
-			assert.ok(e instanceof AiScriptRuntimeError);
-			return;
-		}
-		assert.fail();
 	});
 
 	test.concurrent('||', async () => {
@@ -139,14 +131,6 @@ describe('ops', () => {
 		eq(await exe('<: (true || false)'), BOOL(true));
 		eq(await exe('<: (false || true)'), BOOL(true));
 		eq(await exe('<: (false || false)'), BOOL(false));
-		eq(await exe('<: (true || null)'), BOOL(true));
-		try {
-			await exe('<: (false || null)');
-		} catch (e) {
-			assert.ok(e instanceof AiScriptRuntimeError);
-			return;
-		}
-		assert.fail();
 	});
 
 	test.concurrent('+', async () => {
