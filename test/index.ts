@@ -131,39 +131,6 @@ describe('ops', () => {
 			assert.ok(e instanceof AiScriptRuntimeError);
 			return;
 		}
-
-		eq(
-			await exe(`
-				var tmp = null
-
-				@func() {
-					tmp = true
-					return true
-				}
-
-				false && func()
-
-				<: tmp
-			`),
-			NULL
-		)
-
-		eq(
-			await exe(`
-				var tmp = null
-
-				@func() {
-					tmp = true
-					return true
-				}
-
-				true && func()
-
-				<: tmp
-			`),
-			BOOL(true)
-		)
-
 		assert.fail();
 	});
 
@@ -179,39 +146,6 @@ describe('ops', () => {
 			assert.ok(e instanceof AiScriptRuntimeError);
 			return;
 		}
-
-		eq(
-			await exe(`
-				var tmp = null
-
-				@func() {
-					tmp = true
-					return true
-				}
-
-				true || func()
-
-				<: tmp
-			`),
-			NULL
-		)
-
-		eq(
-			await exe(`
-				var tmp = null
-
-				@func() {
-					tmp = true
-					return true
-				}
-
-				false || func()
-
-				<: tmp
-			`),
-			BOOL(true)
-		)
-
 		assert.fail();
 	});
 

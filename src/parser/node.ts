@@ -31,8 +31,6 @@ export function isStatement(x: Node): x is Statement {
 export type Expression =
 	Infix |
 	Not |
-	And |
-	Or |
 	If |
 	Fn |
 	Match |
@@ -155,18 +153,6 @@ export type Not = NodeBase & {
 	type: 'not';
 	expr: Expression;
 };
-
-export type And = NodeBase & {
-	type: 'and';
-	left: Expression;
-	right: Expression;
-}
-
-export type Or = NodeBase & {
-	type: 'or';
-	left: Expression;
-	right: Expression;
-}
 
 export type If = NodeBase & {
 	type: 'if';
