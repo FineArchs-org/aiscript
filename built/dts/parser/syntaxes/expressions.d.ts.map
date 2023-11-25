@@ -1,0 +1,1 @@
+{"version":3,"file":"expressions.d.ts","sourceRoot":"","sources":["../../../../src/parser/syntaxes/expressions.ts"],"names":[],"mappings":"AAOA,OAAO,KAAK,KAAK,GAAG,MAAM,eAAe,CAAC;AAC1C,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,4BAA4B,CAAC;AAE/D,wBAAgB,SAAS,CAAC,CAAC,EAAE,YAAY,EAAE,QAAQ,EAAE,OAAO,GAAG,GAAG,CAAC,IAAI,CAMtE"}

@@ -1,0 +1,1 @@
+{"version":3,"file":"variable.js","sourceRoot":"","sources":["../../../src/interpreter/variable.ts"],"names":[],"mappings":"AAYA,MAAM,CAAC,MAAM,QAAQ,GAAG;IACvB,GAAG,CAAC,KAAY;QACf,OAAO;YACN,SAAS,EAAE,IAAI;YACf,KAAK;SACL,CAAC;IACH,CAAC;IACD,KAAK,CAAC,KAAY;QACjB,OAAO;YACN,SAAS,EAAE,KAAK;YAChB,KAAK;SACL,CAAC;IACH,CAAC;CACD,CAAC"}

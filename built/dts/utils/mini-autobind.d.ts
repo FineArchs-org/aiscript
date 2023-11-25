@@ -1,0 +1,2 @@
+export declare function autobind<T extends (...args: any[]) => any>(target: object, key: string | symbol, descriptor: TypedPropertyDescriptor<T>): void | TypedPropertyDescriptor<T>;
+//# sourceMappingURL=mini-autobind.d.ts.map
