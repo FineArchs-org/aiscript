@@ -16,9 +16,6 @@
 ### @Math:round(_x_: num): num
 四捨五入して、もっとも近い整数を返します。
 
-### @Math:ceil(_x_: num): num
-引数以上の最小の整数を返します。
-
 ### @Math:floor(_x_: num): num
 引数以下の最大の整数を返します。
 
