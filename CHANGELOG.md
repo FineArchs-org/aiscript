@@ -1,9 +1,5 @@
 [Read translated version (en)](./translations/en/CHANGELOG.md)
 
-# 0.15.0
-- Mathを強化
-- `&&`, `||` 演算子の項が正しく変換されない可能性のあるバグを修正
-
 # 0.14.1
 
 - `&&`, `||` が短絡評価されないバグを修正
