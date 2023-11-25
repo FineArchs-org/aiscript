@@ -375,10 +375,9 @@ export const std: Record<string, Value> = {
 	'Async:interval': FN_NATIVE(async ([interval, callback, immediate], opts) => {
 		assertNumber(interval);
 		assertFunction(callback);
-		if (immediate) {
-			assertBoolean(immediate);
-			if (immediate.value) opts.call(callback, []);
-		}
+		if (immediate) assertBoolean(immediate);
+
+		if (immediate) opts.call(callback, []);
 
 		const id = setInterval(() => {
 			opts.topCall(callback, []);
