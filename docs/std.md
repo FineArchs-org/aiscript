@@ -88,14 +88,6 @@ JSONをパースします。
 型: `str`  
 改行コード(LF)です。  
 
-### #Str:lt(a: str, b: str): num
-a < b ならば -1、a == b ならば 0、a > b ならば 1 を返します。  
-arr.sortの比較関数として使用できます。
-
-### #Str:gt(a: str, b: str): num
-a > b ならば -1、a == b ならば 0、a < b ならば 1 を返します。  
-arr.sortの比較関数として使用できます。
-
 ## :: Obj
 ### @Obj:keys(_v_: obj): arr
 
