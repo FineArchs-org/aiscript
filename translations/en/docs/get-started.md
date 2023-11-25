@@ -109,7 +109,6 @@ All of the functions listed below can be used as sugar-coated syntax such as `(1
 	<tr><td><code>Core:add</code></td><td><code>+</code></td><td>addition</td></tr>
 	<tr><td><code>Core:sub</code></td><td><code>-</code></td><td>subtraction</td></tr>
 	<tr><td><code>Core:mul</code></td><td><code>*</code></td><td>multiplication</td></tr>
-	<tr><td><code>Core:pow</code></td><td><code>^</code></td><td>exponentiation</td></tr>
 	<tr><td><code>Core:div</code></td><td><code>/</code></td><td>division</td></tr>
 	<tr><td><code>Core:mod</code></td><td><code>%</code></td><td>remainder</td></tr>
 	<tr><td><code>Core:eq</code></td><td><code>==</code></td><td>equal</td></tr>

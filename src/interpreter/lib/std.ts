@@ -61,14 +61,6 @@ export const std: Record<string, Value> = {
 		return NUM(a.value * b.value);
 	}),
 
-	'Core:pow': FN_NATIVE(([a, b]) => {
-		assertNumber(a);
-		assertNumber(b);
-		const res = a.value ** b.value;
-		if (isNaN(res)) throw new AiScriptRuntimeError('Invalid operation.'); // ex. √-1
-		return NUM(res);
-	}),
-
 	'Core:div': FN_NATIVE(([a, b]) => {
 		assertNumber(a);
 		assertNumber(b);
